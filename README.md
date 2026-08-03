@@ -1,35 +1,43 @@
 # devops-k8s-project
 
-# 🐳 Minimal Python Docker Example
+# 🐳 Containerized Python Application
 
-A tiny example showing how to package a simple Python application into a Docker image.
+A minimal Python web application running inside a Docker container.
 
-## 🚀 Features
-
-- Minimal Python application
-- Lightweight Docker image (`python:3.12-slim`)
-- Easy to build and run
-- Great starting point for Docker beginners
+The application listens on **port 8000** and returns a simple message whenever it receives an HTTP request.
 
 ---
 
-## 📁 Project Structure
+# 📋 Project Overview
+
+This project demonstrates how to:
+
+- Create a simple Python web application
+- Containerize the application using Docker
+- Build a Docker image
+- Run the application inside a Docker container
+- Access the application through a web browser or using `curl`
+
+---
+
+# 📁 Project Structure
 
 ```text
 .
 ├── app.py
 ├── Dockerfile
-└── README.md
+├── README.md
+└── requirements.txt
 ```
 
 ---
 
-## 📋 Prerequisites
+# ⚙️ Prerequisites
 
-Before you begin, make sure you have:
+Before running the project, make sure you have:
 
 - Docker installed
-- Docker daemon running
+- Docker Engine running
 
 Verify your installation:
 
@@ -39,40 +47,53 @@ docker --version
 
 ---
 
-## 🔨 Build the Docker Image
+# 🚀 Quick Start
 
-Run the following command from the project directory:
+## Build the Docker image
 
 ```bash
 docker build -t tiny-python-app .
 ```
 
-This command:
+## Run the container
 
-- Reads the `Dockerfile`
-- Downloads the base image (if necessary)
-- Copies the application into the image
-- Creates a Docker image named `tiny-python-app`
+```bash
+docker run -p 8000:8000 --rm tiny-python-app
+```
+
+The application will now be available at:
+
+```
+http://localhost:8000
+```
 
 ---
 
-## ▶️ Run the Container
+# 🌐 Test the Application
 
-```bash
-docker run --rm tiny-python-app
+### Using a browser
+
+Open:
+
+```
+http://localhost:8000
 ```
 
-Expected output:
+### Using curl
+
+```bash
+curl http://localhost:8000
+```
+
+Expected response:
 
 ```text
 Hello from a tiny Python app running in Docker!
 ```
 
-The `--rm` flag automatically removes the container after it exits.
-
 ---
 
-## 🐳 Dockerfile Explained
+# 🐳 Dockerfile Explanation
 
 ```dockerfile
 FROM python:3.12-slim
@@ -81,6 +102,8 @@ WORKDIR /app
 
 COPY app.py .
 
+EXPOSE 8000
+
 CMD ["python", "app.py"]
 ```
 
@@ -88,50 +111,28 @@ CMD ["python", "app.py"]
 |------------|-------------|
 | `FROM` | Uses the official lightweight Python 3.12 image as the base image. |
 | `WORKDIR` | Sets `/app` as the working directory inside the container. |
-| `COPY` | Copies the application file into the container. |
-| `CMD` | Executes the Python application when the container starts. |
+| `COPY` | Copies the application into the container. |
+| `EXPOSE 8000` | Documents that the application listens on port **8000**. |
+| `CMD` | Starts the Python web server when the container runs. |
 
 ---
 
-## 📂 Project Files
+# 🖥️ Application Behavior
 
-### `app.py`
+The application:
 
-```python
-def main():
-    print("Hello from a tiny Python app running in Docker!")
+- Starts an HTTP server
+- Listens on **port 8000**
+- Waits for incoming HTTP requests
+- Returns the following message for every request:
 
-if __name__ == "__main__":
-    main()
-```
-
-This is a minimal Python application used to demonstrate how Docker packages and runs Python code.
-
----
-
-## 🧹 Clean Up
-
-To remove the Docker image:
-
-```bash
-docker rmi tiny-python-app
+```text
+Hello from a tiny Python app running in Docker!
 ```
 
 ---
 
-## 🎯 Learning Goals
-
-This project demonstrates:
-
-- Creating a simple Python application
-- Writing a basic Dockerfile
-- Building Docker images
-- Running Docker containers
-- Understanding the purpose of common Dockerfile instructions
-
----
-
-## 📚 Useful Docker Commands
+# 📦 Docker Commands
 
 Build the image:
 
@@ -142,7 +143,7 @@ docker build -t tiny-python-app .
 Run the container:
 
 ```bash
-docker run --rm tiny-python-app
+docker run -p 8000:8000 --rm tiny-python-app
 ```
 
 List local images:
@@ -162,3 +163,17 @@ List all containers:
 ```bash
 docker ps -a
 ```
+
+Stop a running container:
+
+```bash
+docker stop <container_id>
+```
+
+Remove the Docker image:
+
+```bash
+docker rmi tiny-python-app
+```
+
+---
