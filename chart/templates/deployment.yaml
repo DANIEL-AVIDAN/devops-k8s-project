@@ -15,11 +15,12 @@ spec:
         {{- include "myapp.labels" . | nindent 8 }}
     spec:
       containers:
-      - name: {{ .Release.Name }} 
-        image: {{ .Values.pod.image}}:{{ .Values.pod.tag }} 
-        env:
-            - name: APP_PORT
-            value: {{ .Values.pod.target_port | quote }}
-        ports:
-            - containerPort: {{ .Values.pod.target_port }}
+        - name: {{ .Release.Name }}
+          image: {{ .Values.pod.image }}:{{ .Values.pod.tag }}
 
+          env:
+            - name: APP_PORT
+              value: {{ .Values.pod.target_port | quote }}
+
+          ports:
+            - containerPort: {{ .Values.pod.target_port }}
