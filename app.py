@@ -1,21 +1,24 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.end_headers()
-        self.wfile.write(b"Hello from a tiny Python app running in Docker!")
+        message = "Hello from the Python microservice!"
 
-    # מונע הדפסות ללוג בכל בקשה (אופציונלי)
-    def log_message(self, format, *args):
-        return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(message.encode("utf-8"))
 
 
 def main():
-    server = HTTPServer(("0.0.0.0", 8000), RequestHandler)
-    print("Server is running on port 8000...")
+    port = int(os.getenv("APP_PORT", "8000"))
+
+    server = HTTPServer(("0.0.0.0", port), RequestHandler)
+
+    print(f"Microservice is listening on port {port}", flush=True)
+
     server.serve_forever()
 
 
