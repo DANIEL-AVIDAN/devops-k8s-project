@@ -21,10 +21,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sh '''
-                        printf '%s' "$DOCKER_PASSWORD" | docker login \
-                            -u "$DOCKER_USERNAME" \
-                            --password-stdin
-
+                        printf '%s' "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         docker push danielavidan/${APP_NAME}:${BUILD_NUMBER}
                     '''
                 }
