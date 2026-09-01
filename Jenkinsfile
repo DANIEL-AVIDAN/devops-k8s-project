@@ -1,10 +1,16 @@
 pipeline {
     agent any
+
+        environment {
+        APP_NAME = "MyApp"
+    }
+
+
     stages {
         stage('Build') {
             steps {
                 echo 'Building...'
-                // Build steps here
+                docker build -t ${env.APP_NAME}:${env.BUILD_NUMBER} .`
             }
         }
         stage('Test') {
@@ -21,3 +27,6 @@ pipeline {
         }
     }
 }
+
+
+
