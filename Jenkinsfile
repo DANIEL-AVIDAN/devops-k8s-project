@@ -10,7 +10,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building...'
-                docker build -t ${env.APP_NAME}:${env.BUILD_NUMBER} .`
+                docker build -t "${env.APP_NAME}:${env.BUILD_NUMBER} ."
             }
         }
         stage('Test') {
