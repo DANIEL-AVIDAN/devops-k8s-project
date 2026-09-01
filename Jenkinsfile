@@ -9,7 +9,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building...'
-                sh 'docker build -t "danielavidan/${env.APP_NAME}:${env.BUILD_NUMBER} ."'
+                sh "docker build -t danielavidan/${env.APP_NAME}:${env.BUILD_NUMBER} ."
             }
         }
         stage('Test') {
