@@ -2,7 +2,7 @@ pipeline {
     agent any
 
         environment {
-        APP_NAME = "MyApp"
+        APP_NAME = "appbyjenkins"
     }
 
     stages {
