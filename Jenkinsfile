@@ -15,11 +15,18 @@ pipeline {
 
         stage('Push') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'danielavidan-dockerhub', usernameVariable: 'Username', passwordVariable: 'Password')]) {
-                    echo "Deploying with username $Username"
-                    // Use the credentials in your deployment steps
-                    sh "docker login -u $Username"
-                    sh "docker push danielavidan/${env.APP_NAME}:${env.BUILD_NUMBER}"
+                withCredentials([usernamePassword(
+                    credentialsId: 'danielavidan-dockerhub',
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )]) {
+                    sh '''
+                        printf '%s' "$DOCKER_PASSWORD" | docker login \
+                            -u "$DOCKER_USERNAME" \
+                            --password-stdin
+
+                        docker push danielavidan/${APP_NAME}:${BUILD_NUMBER}
+                    '''
                 }
             }
         }
