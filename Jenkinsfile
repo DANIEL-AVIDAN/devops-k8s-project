@@ -5,12 +5,11 @@ pipeline {
         APP_NAME = "MyApp"
     }
 
-
     stages {
         stage('Build') {
             steps {
                 echo 'Building...'
-                docker build -t "danielavidan/${env.APP_NAME}:${env.BUILD_NUMBER} ."
+                sh 'docker build -t "danielavidan/${env.APP_NAME}:${env.BUILD_NUMBER} ."'
             }
         }
         stage('Test') {
