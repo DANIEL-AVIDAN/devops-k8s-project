@@ -1,0 +1,16 @@
+kind: Service     
+apiVersion: v1     
+metadata:
+  name: {{ .Release.Name }}-svc #from RELEASE NAME
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "myapp.labels" . | nindent 4}} 
+  type: {{ .Values.service.service_type }}  #from values
+  ports:         
+  - name: http   
+    protocol: TCP
+    port: {{ .Values.pod.port }} #from Values
+    targetPort: {{ .Values.pod.target_port }}  #from values
+

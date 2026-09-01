@@ -1,0 +1,11 @@
+deployment:
+  replicas: 2
+
+pod:
+  image: danielavidan/tiny-python-app
+  tag: latest
+  target_port: 8000
+  port: 8000
+
+service:
+  service_type: ClusterIP

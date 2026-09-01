@@ -1,0 +1,4 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Release name:
+  {{ .Release.Name }}
