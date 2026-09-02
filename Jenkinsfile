@@ -20,7 +20,7 @@ pipeline {
                 stage('SonarQube') {
                     steps {
                         script {
-                            // codeQuality.sonarCreateProject()    
+                            sonarCreateProject(env.APP_NAME)
                             codeQuality.sonarLocalScan() 
                             codeQuality.sonarEcho()
                         }
