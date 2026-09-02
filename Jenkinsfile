@@ -72,7 +72,9 @@ pipeline {
 
         stage('Continue the pipeline') {
             steps {
-                echo 'Continuing the pipeline...'
+                script {
+                    myLibrary.continuePipeline()
+                }
             }
         }
 
