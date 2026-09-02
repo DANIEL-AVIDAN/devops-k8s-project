@@ -46,30 +46,29 @@ pipeline {
         stage('Parallel Tests') {
             parallel {
                 stage('Test on Chrome') {
-                    steps {
-                        script {
-                                myLibrary.chromeTest()
-                            }
-                    }
+            steps {
+                script {
+                    myLibrary.chromeTest()
                 }
-                stage('Test on Firefox') {
-                    steps {
-                        script {
-                                myLibrary.firefoxTest()
-                            }
+            }
+        }
+        stage('Test on Firefox') {
+            steps {
+                script {
+                    myLibrary.firefoxTest()
+                        }
                     }
                 }
             }
         }
 
         stage('Wait for User Approval') {
-                    steps {
-                        input(
-                            message: 'Is the application running successfully?',
-                            ok: 'Continue'
-                        )
-                    }
+            steps {
+                script {
+                    myLibrary.userApproval()
                 }
+            }
+        }
 
         stage('Continue the pipeline') {
             steps {
