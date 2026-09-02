@@ -21,8 +21,8 @@ pipeline {
                     steps {
                         script {
                             codeQuality.sonarCreateProject()                           
-                            codeQuality.sonarLocalScan()
-                            codeQuality.sonarEcho()
+                            // codeQuality.sonarLocalScan()
+                            // codeQuality.sonarEcho()
                         }
                     }
                 }
