@@ -16,6 +16,9 @@ pipeline {
             }
         }
 
+        # add parallel
+        $ add user input (start with just echo and then add the actual input step)
+
         stage('Push') {
             steps {
                 withCredentials([usernamePassword(
@@ -31,10 +34,30 @@ pipeline {
             }
         }
 
+
+
+
         stage('Test') {
             steps {
                 script {
                     myLibrary.testApp()
+                }
+            }
+        }
+
+        stage('Parallel Tests') {
+            parallel {
+                stage('Test on Chrome') {
+                    steps {
+                        echo 'Testing VOLT on Chrome...'
+                        // Chrome test steps here
+                    }
+                }
+                stage('Test on Firefox') {
+                    steps {
+                        echo 'Testing VOLT on Firefox...'
+                        // Firefox test steps here
+                    }
                 }
             }
         }
