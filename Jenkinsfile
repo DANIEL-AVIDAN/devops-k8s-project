@@ -16,9 +16,6 @@ pipeline {
             }
         }
 
-        # add parallel
-        $ add user input (start with just echo and then add the actual input step)
-
         stage('Push') {
             steps {
                 withCredentials([usernamePassword(
