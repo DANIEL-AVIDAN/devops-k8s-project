@@ -7,7 +7,7 @@ pipeline {
         APP_NAME = "appbyjenkins"
         BRANCH_NAME="BestBranch"
     }
-
+    stages {
         stage('Parallel Build & SonarQube') {
             parallel {
                 stage('Build') {
@@ -94,3 +94,4 @@ pipeline {
             }
         }
     }
+}
