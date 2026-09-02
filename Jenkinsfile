@@ -8,11 +8,21 @@ pipeline {
         BRANCH_NAME="BestBranch"
     }
 
-    stages {
-        stage('Build') {
-            steps {
-                script {
-                    myLibrary.buildApp()
+        stage('Parallel Build & SonarQube') {
+            parallel {
+                stage('Build') {
+                    steps {
+                        script {
+                            codeQuality.buildApp()
+                        }
+                    }
+                }
+                stage('SonarQube') {
+                    steps {
+                        script {
+                            codeQuality.sonarEcho()
+                        }
+                    }
                 }
             }
         }
@@ -31,8 +41,6 @@ pipeline {
                 }
             }
         }
-
-
 
 
         stage('Test') {
