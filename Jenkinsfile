@@ -5,6 +5,7 @@ pipeline {
 
         environment {
         APP_NAME = "appbyjenkins"
+        BRANCH_NAME="BestBranch"
     }
 
     stages {
