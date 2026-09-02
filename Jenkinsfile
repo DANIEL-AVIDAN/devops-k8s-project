@@ -22,10 +22,11 @@ pipeline {
                     credentialsId: 'danielavidan-dockerhub',
                     usernameVariable: 'DOCKER_USERNAME',
                     passwordVariable: 'DOCKER_PASSWORD'
-                )])
-                script {
-                    // myLibrary.pushApp()
-                    echo 'Pushing...'
+                )]) {
+                    sh '''
+                        printf '%s' "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        docker push danielavidan/${APP_NAME}:${BUILD_NUMBER}
+                    '''
                 }
             }
         }
