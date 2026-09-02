@@ -1,3 +1,5 @@
+@Library('my-shared-library') _
+
 pipeline {
     agent any
 
@@ -8,8 +10,9 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                echo 'Building...'
-                sh "docker build -t danielavidan/${env.APP_NAME}:${env.BUILD_NUMBER} ."
+                script {
+                    myLibrary.buildApp()
+                }
             }
         }
 
@@ -19,26 +22,26 @@ pipeline {
                     credentialsId: 'danielavidan-dockerhub',
                     usernameVariable: 'DOCKER_USERNAME',
                     passwordVariable: 'DOCKER_PASSWORD'
-                )]) {
-                    sh '''
-                        printf '%s' "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                        docker push danielavidan/${APP_NAME}:${BUILD_NUMBER}
-                    '''
+                )])
+                script {
+                    myLibrary.pushApp()
                 }
             }
         }
 
         stage('Test') {
             steps {
-                echo 'Testing...'
-                // Test steps here
+                script {
+                    myLibrary.testApp()
+                }
             }
         }
         
         stage('Deploy') {
             steps {
-                echo 'Deploying...'
-                // Deploy steps here
+                script {
+                    myLibrary.deployApp(env.BRANCH_NAME)
+                }
             }
         }
     }
