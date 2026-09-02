@@ -46,14 +46,16 @@ pipeline {
             parallel {
                 stage('Test on Chrome') {
                     steps {
-                        echo 'Testing VOLT on Chrome...'
-                        // Chrome test steps here
+                        script {
+                                myLibrary.chromeTest()
+                            }
                     }
                 }
                 stage('Test on Firefox') {
                     steps {
-                        echo 'Testing VOLT on Firefox...'
-                        // Firefox test steps here
+                        script {
+                                myLibrary.firefoxTest()
+                            }
                     }
                 }
             }
