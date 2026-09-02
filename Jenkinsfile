@@ -24,7 +24,8 @@ pipeline {
                     passwordVariable: 'DOCKER_PASSWORD'
                 )])
                 script {
-                    myLibrary.pushApp()
+                    // myLibrary.pushApp()
+                    echo 'Pushing...'
                 }
             }
         }
