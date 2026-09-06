@@ -1,8 +1,8 @@
-# 🐳 Python Microservice with Docker, Helm & Kubernetes
+# 🐳 Python Microservice with Docker, Helm, Kubernetes & Ingress
 
 A simple Python HTTP microservice packaged as a Docker image and deployed to Kubernetes using Helm.
 
-This project is intended for learning and demonstrates the basic flow from application code to a running Kubernetes workload.
+This project is intended for learning and demonstrates the flow from application code to a running Kubernetes workload that is exposed through a Kubernetes **Ingress**.
 
 The application listens on a configurable port using the `APP_PORT` environment variable.
 
@@ -20,8 +20,45 @@ This project demonstrates how to:
 - Deploy the application to Kubernetes
 - Use Helm templates and `values.yaml`
 - Run multiple replicas of the application
-- Expose the Pods through a Kubernetes Service
-- Test the deployment locally with Minikube
+- Expose Pods through a Kubernetes `ClusterIP` Service
+- Route external HTTP traffic through a Kubernetes Ingress
+- Use an Ingress Controller
+- Use `nip.io` for a convenient local hostname
+- Access the Ingress locally with Minikube
+- Understand the difference between Ingress access and `kubectl port-forward`
+
+---
+
+## 🧭 Application Architecture
+
+The main Kubernetes request flow is:
+
+```text
+Browser
+   |
+   | HTTP :80
+   v
+Ingress Controller
+   |
+   | reads the Ingress routing rules
+   v
+my-app-svc :8000
+   |
+   | ClusterIP Service
+   v
+Application Pods :8000
+```
+
+The important distinction is:
+
+- **Ingress** — defines HTTP routing rules.
+- **Ingress Controller** — receives the actual HTTP traffic and applies the Ingress rules.
+- **Service** — provides a stable internal endpoint for the application Pods.
+- **Pods** — run the Python application.
+
+The application itself does not need to listen on port `80`.
+
+The Ingress Controller accepts the external HTTP request on port `80` and forwards it to the Service on port `8000`.
 
 ---
 
@@ -40,7 +77,8 @@ This project demonstrates how to:
     └── templates/
         ├── _helpers.tpl
         ├── deployment.yaml
-        └── service.yaml
+        ├── service.yaml
+        └── ingress.yaml
 ```
 
 > `.env` is used only for local Docker execution and should not be committed to Git.
@@ -59,7 +97,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         message = "Hello from the Python microservice!"
-
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.end_headers()
@@ -68,11 +105,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 def main():
     port = int(os.getenv("APP_PORT", "8000"))
-
     server = HTTPServer(("0.0.0.0", port), RequestHandler)
-
     print(f"Microservice is listening on port {port}", flush=True)
-
     server.serve_forever()
 
 
@@ -151,17 +185,19 @@ Expected response:
 Hello from the Python microservice!
 ```
 
-You can also open the application in a browser:
+You can also open:
 
 ```text
 http://localhost:8000
 ```
 
+in a browser.
+
 ---
 
 # ☁️ Docker Hub
 
-The Kubernetes deployment uses the following Docker image:
+The Kubernetes Deployment uses the following Docker image:
 
 ```text
 danielavidan/tiny-python-app:latest
@@ -197,17 +233,26 @@ docker pull danielavidan/tiny-python-app:latest
 
 The application is deployed to Kubernetes using a Helm chart.
 
-The Helm chart contains:
+The chart creates the main Kubernetes resources:
 
 ```text
-chart/
-├── Chart.yaml
-├── values.yaml
-└── templates/
-    ├── _helpers.tpl
-    ├── deployment.yaml
-    └── service.yaml
+Helm Release
+    |
+    +-- Deployment
+    |      |
+    |      +-- Pod #1
+    |      +-- Pod #2
+    |
+    +-- Service (ClusterIP)
+    |
+    +-- Ingress
 ```
+
+The Deployment manages the application Pods.
+
+The Service provides a stable internal endpoint for those Pods.
+
+The Ingress defines how HTTP traffic entering the cluster should be routed to the Service.
 
 ---
 
@@ -286,22 +331,22 @@ The flow is:
 
 ```text
 values.yaml
-     │
-     │ target_port: 8000
-     ▼
+     |
+     | target_port: 8000
+     v
 Helm Template
-     │
-     ▼
+     |
+     v
 Deployment
-     │
-     │ APP_PORT="8000"
-     ▼
+     |
+     | APP_PORT="8000"
+     v
 Container
-     │
-     ▼
+     |
+     v
 app.py
-     │
-     ▼
+     |
+     v
 HTTP Server :8000
 ```
 
@@ -315,11 +360,9 @@ The important container configuration inside `deployment.yaml` is:
 containers:
   - name: {{ .Release.Name }}
     image: {{ .Values.pod.image }}:{{ .Values.pod.tag }}
-
     env:
       - name: APP_PORT
         value: {{ .Values.pod.target_port | quote }}
-
     ports:
       - containerPort: {{ .Values.pod.target_port }}
 ```
@@ -343,13 +386,17 @@ ports:
   - containerPort: {{ .Values.pod.target_port }}
 ```
 
-This tells Kubernetes which port the container is expected to listen on.
+This documents the port that the container is expected to listen on.
 
 ---
 
 # 🌐 Kubernetes Service
 
-The Helm chart also creates a Kubernetes Service.
+The Helm chart creates a Kubernetes Service named:
+
+```text
+my-app-svc
+```
 
 The Service uses:
 
@@ -357,27 +404,133 @@ The Service uses:
 service_type: ClusterIP
 ```
 
-The Service forwards traffic to the application Pods.
+A `ClusterIP` Service is internal to the Kubernetes cluster.
+
+It provides a stable endpoint for a dynamic group of Pods:
+
+```text
+              my-app-svc :8000
+                     |
+             +-------+-------+
+             |               |
+             v               v
+          Pod #1           Pod #2
+       Python :8000     Python :8000
+```
+
+The Service does **not** need to be changed to `LoadBalancer` when it is used behind an Ingress.
+
+The Ingress Controller runs inside the cluster and can reach the `ClusterIP` Service directly.
+
+---
+
+# 🌍 Kubernetes Ingress
+
+The project also contains an `Ingress` resource.
+
+Ingress defines HTTP routing rules such as:
+
+```text
+Host: myapp.127.0.0.1.nip.io
+Path: /
+              |
+              v
+      my-app-svc:8000
+```
 
 Conceptually:
 
 ```text
-               Kubernetes Service
-                      │
-             ┌────────┴────────┐
-             │                 │
-             ▼                 ▼
-          Pod #1             Pod #2
-       Python :8000       Python :8000
+Request
+http://myapp.127.0.0.1.nip.io/
+              |
+              v
+      Ingress Controller
+              |
+              | host matches
+              | path starts with /
+              v
+        my-app-svc:8000
+              |
+              v
+        Application Pod
 ```
 
-The Deployment maintains the Pods, while the Service provides a stable network endpoint for reaching them.
+An Ingress resource is **configuration**. It does not receive network traffic by itself.
+
+An **Ingress Controller** watches the Kubernetes API, reads the Ingress rules and performs the actual reverse-proxy routing.
+
+For this project, the Minikube Ingress addon is used.
+
+A simplified Ingress resource looks like:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: my-ingress
+
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: myapp.127.0.0.1.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-app-svc
+                port:
+                  number: 8000
+```
+
+`path: /` with `pathType: Prefix` means that every path under this hostname can be routed to the same Service.
+
+For example:
+
+```text
+/
+/hello
+/users
+/api/items
+```
+
+all match the `/` prefix.
+
+---
+
+# 🔤 Why `nip.io`?
+
+For local development, it is useful to have a hostname without buying or configuring a real domain.
+
+`nip.io` provides DNS names that resolve to the IP address embedded in the hostname.
+
+For example:
+
+```text
+myapp.127.0.0.1.nip.io
+```
+
+resolves to:
+
+```text
+127.0.0.1
+```
+
+This allows the Ingress rule to use a realistic hostname while still running locally.
+
+The hostname also matters to the Ingress Controller because HTTP requests contain a `Host` header.
+
+The host in the request must match the host configured in the Ingress rule.
 
 ---
 
 # 🧪 Running Locally with Minikube
 
-## Start Minikube
+## 1. Start Minikube
 
 ```bash
 minikube start
@@ -389,7 +542,29 @@ Verify that Kubernetes is available:
 kubectl get nodes
 ```
 
-You should see the Minikube node in a `Ready` state.
+The Minikube node should be in the `Ready` state.
+
+---
+
+## 2. Enable the Ingress Controller
+
+Enable the Minikube Ingress addon:
+
+```bash
+minikube addons enable ingress
+```
+
+You can verify that the addon is enabled with:
+
+```bash
+minikube addons list
+```
+
+You can also inspect the Ingress Controller Pods:
+
+```bash
+kubectl get pods -n ingress-nginx
+```
 
 ---
 
@@ -401,33 +576,31 @@ Move into the Helm chart directory:
 cd chart
 ```
 
-Before installing the application, validate the chart:
+Validate the chart:
 
 ```bash
 helm lint .
 ```
 
-You can also render the Kubernetes manifests without installing them:
+Render the Kubernetes manifests without installing them:
 
 ```bash
 helm upgrade --install my-app . --dry-run
 ```
 
-This is useful for seeing exactly what YAML Helm generates from the templates.
-
-For example:
+This is useful for seeing exactly what YAML Helm generates from the templates:
 
 ```text
 values.yaml
-     │
-     ▼
+     |
+     v
 Helm Templates
-     │
-     ▼
+     |
+     v
 Rendered Kubernetes YAML
 ```
 
-No Kubernetes resources are actually created when using `--dry-run`.
+No Kubernetes resources are created when using `--dry-run`.
 
 ---
 
@@ -501,30 +674,64 @@ The Service created by the chart is:
 my-app-svc
 ```
 
+Check the Ingress:
+
+```bash
+kubectl get ingress
+```
+
+For more details:
+
+```bash
+kubectl describe ingress my-ingress
+```
+
 ---
 
-# 🌐 Access the Application from Minikube
+# 🚇 Access the Application with `minikube tunnel`
 
-The Service is currently configured as:
+When Minikube runs through Docker Desktop, the Kubernetes network is separated from the host machine.
 
-```yaml
-service_type: ClusterIP
-```
+The application Service is intentionally a `ClusterIP`, so it is not directly exposed to the laptop.
 
-A `ClusterIP` Service is normally accessible only from inside the Kubernetes cluster.
+The Ingress Controller is the entry point that should receive the HTTP request.
 
-For local testing, use Kubernetes port forwarding:
+For local access, open a **separate terminal** and run:
 
 ```bash
-kubectl port-forward service/my-app-svc 8000:8000
+minikube tunnel
 ```
 
-Keep that terminal open.
+The command may ask for administrator privileges because it needs to configure local networking.
 
-Then open another terminal and run:
+Keep this terminal open while accessing the application.
+
+Conceptually, the local flow becomes:
+
+```text
+Browser
+   |
+   | http://myapp.127.0.0.1.nip.io
+   | HTTP port 80
+   v
+Host machine
+   |
+   | network path provided by Minikube
+   v
+Ingress Controller
+   |
+   | Ingress rule
+   v
+my-app-svc :8000
+   |
+   v
+Application Pod :8000
+```
+
+Now test the application:
 
 ```bash
-curl http://localhost:8000
+curl http://myapp.127.0.0.1.nip.io
 ```
 
 Expected response:
@@ -536,10 +743,100 @@ Hello from the Python microservice!
 You can also open:
 
 ```text
-http://localhost:8000
+http://myapp.127.0.0.1.nip.io
 ```
 
-in your browser.
+in a browser.
+
+Because the URL uses normal HTTP without an explicit port, the browser connects on port `80`.
+
+The Ingress Controller then forwards the request internally to:
+
+```text
+my-app-svc:8000
+```
+
+The Service forwards it to one of the application Pods listening on port `8000`.
+
+---
+
+## Using the Minikube IP Instead
+
+On environments where the Minikube node IP is directly reachable from the host, the Ingress hostname can instead contain the Minikube IP.
+
+Get the IP with:
+
+```bash
+minikube ip
+```
+
+For example:
+
+```text
+192.168.49.2
+```
+
+A matching `nip.io` hostname would be:
+
+```text
+myapp.192.168.49.2.nip.io
+```
+
+In that case, the host configured in `ingress.yaml` must match the hostname used in the request.
+
+For Docker Desktop setups where the Minikube node IP is not directly reachable from the host, use the tunnel approach with `127.0.0.1`.
+
+---
+
+# 🔌 `port-forward` vs Ingress
+
+Before adding Ingress, the application could be tested using:
+
+```bash
+kubectl port-forward service/my-app-svc 8000:8000
+```
+
+That creates a temporary direct path from the laptop to the Service:
+
+```text
+Browser
+   |
+localhost:8000
+   |
+kubectl port-forward
+   |
+   v
+my-app-svc:8000
+   |
+   v
+Pod:8000
+```
+
+This **bypasses the Ingress completely**.
+
+It is still useful for debugging because it can help determine whether the Service and Pods are working independently of the Ingress.
+
+For normal testing of the complete architecture, use:
+
+```text
+Browser
+   |
+   v
+Ingress Controller
+   |
+   v
+Service
+   |
+   v
+Pod
+```
+
+So:
+
+- `kubectl port-forward` = direct temporary debugging access to a resource
+- `minikube tunnel` = enables host-to-Minukube network access needed by the local setup
+- `Ingress` = defines HTTP routing rules
+- `Ingress Controller` = receives requests and applies those routing rules
 
 ---
 
@@ -561,6 +858,25 @@ kubectl get deployments
 
 ```bash
 kubectl get services
+```
+
+## List Ingress Resources
+
+```bash
+kubectl get ingress
+```
+
+## Inspect the Ingress
+
+```bash
+kubectl describe ingress my-ingress
+```
+
+## Inspect the Ingress Controller
+
+```bash
+kubectl get pods -n ingress-nginx
+kubectl get services -n ingress-nginx
 ```
 
 ## Get More Information About a Pod
@@ -593,7 +909,7 @@ kubectl logs -f <pod-name>
 
 ---
 
-## Check APP_PORT Inside a Pod
+## Check `APP_PORT` Inside a Pod
 
 ```bash
 kubectl exec <pod-name> -- printenv APP_PORT
@@ -606,6 +922,73 @@ Expected output:
 ```
 
 This confirms that Helm/Kubernetes successfully passed the environment variable into the container.
+
+---
+
+# 🛠️ Troubleshooting the Request Path
+
+If the application is not reachable through the Ingress, validate each layer separately.
+
+### 1. Are the Pods running?
+
+```bash
+kubectl get pods
+```
+
+### 2. Does the Service exist?
+
+```bash
+kubectl get service my-app-svc
+```
+
+### 3. Does the Service point to healthy Pods?
+
+```bash
+kubectl get endpoints my-app-svc
+```
+
+### 4. Does direct Service access work?
+
+For debugging only:
+
+```bash
+kubectl port-forward service/my-app-svc 8000:8000
+```
+
+Then:
+
+```bash
+curl http://localhost:8000
+```
+
+If this works, the application, Pods and Service are probably healthy.
+
+### 5. Does the Ingress exist?
+
+```bash
+kubectl get ingress
+kubectl describe ingress my-ingress
+```
+
+### 6. Is the Ingress Controller running?
+
+```bash
+kubectl get pods -n ingress-nginx
+```
+
+### 7. Is the local tunnel running?
+
+```bash
+minikube tunnel
+```
+
+### 8. Does the hostname match the Ingress rule?
+
+For the tunnel-based setup, verify that both the Ingress and request use:
+
+```text
+myapp.127.0.0.1.nip.io
+```
 
 ---
 
@@ -648,13 +1031,16 @@ Remove the Helm release:
 helm uninstall my-app
 ```
 
-Verify that the resources were removed:
+Verify that the application resources were removed:
 
 ```bash
 kubectl get deployments
 kubectl get pods
 kubectl get services
+kubectl get ingress
 ```
+
+The Minikube Ingress Controller belongs to the Minikube addon, not to the Helm release, so uninstalling the application does not remove the controller itself.
 
 ---
 
@@ -666,7 +1052,13 @@ Stop the local Kubernetes cluster:
 minikube stop
 ```
 
-If you want to completely delete the Minikube cluster:
+If `minikube tunnel` is running, stop it with:
+
+```text
+Ctrl+C
+```
+
+To completely delete the Minikube cluster:
 
 ```bash
 minikube delete
@@ -679,49 +1071,72 @@ minikube delete
 The complete project flow is:
 
 ```text
-        app.py
-           │
-           ▼
-      Dockerfile
-           │
-           │ docker build
-           ▼
-      Docker Image
-           │
-           │ docker push
-           ▼
-      Docker Hub
-danielavidan/tiny-python-app
-           │
-           ▼
-      values.yaml
-           │
-           ▼
-      Helm Templates
-           │
-           │ helm upgrade --install
-           ▼
-   Kubernetes Deployment
-           │
-           ▼
-      ┌───────────┐
-      │           │
-      ▼           ▼
-    Pod #1      Pod #2
-      │           │
-      └─────┬─────┘
-            │
-            ▼
-     Kubernetes Service
-        my-app-svc
-            │
-            │ kubectl port-forward
-            ▼
-    http://localhost:8000
-            │
-            ▼
-Hello from the Python microservice!
+                  app.py
+                     |
+                     v
+                 Dockerfile
+                     |
+                     | docker build
+                     v
+                Docker Image
+                     |
+                     | docker push
+                     v
+                 Docker Hub
+       danielavidan/tiny-python-app
+                     |
+                     v
+                 values.yaml
+                     |
+                     v
+              Helm Templates
+                     |
+                     | helm upgrade --install
+                     v
+          Kubernetes Deployment
+                     |
+              +------+------+
+              |             |
+              v             v
+            Pod #1         Pod #2
+          Python :8000   Python :8000
+              |             |
+              +------+------+
+                     |
+                     v
+             my-app-svc :8000
+                ClusterIP
+                     ^
+                     |
+               Ingress rule
+                     ^
+                     |
+             Ingress Controller
+                  HTTP :80
+                     ^
+                     |
+         local Minikube networking
+                     ^
+                     |
+ http://myapp.127.0.0.1.nip.io
+                     ^
+                     |
+                   Browser
 ```
+
+The key runtime request flow is therefore:
+
+```text
+Browser
+  -> Ingress Controller
+  -> my-app-svc
+  -> Pod
+  -> Python HTTP server
+```
+
+`kubectl port-forward` is no longer the primary access path once the Ingress is being tested.
+
+It remains useful as a debugging tool.
 
 ---
 
@@ -743,6 +1158,13 @@ This project demonstrates:
 - Running multiple Pod replicas
 - Creating Kubernetes Services
 - Understanding `ClusterIP`
+- Understanding Kubernetes Ingress
+- Understanding the difference between Ingress and an Ingress Controller
+- Routing traffic from an Ingress to a Service
+- Understanding external port `80` versus internal application port `8000`
+- Using `nip.io` for local hostnames
+- Using `minikube tunnel` for local cluster access
+- Understanding when `kubectl port-forward` bypasses the Ingress
 - Using Helm charts
 - Using Helm templates
 - Using `values.yaml`
@@ -753,7 +1175,3 @@ This project demonstrates:
 - Using `kubectl` for inspection and troubleshooting
 
 ---
-
-# 📄 License
-
-This project is intended for educational purposes.
