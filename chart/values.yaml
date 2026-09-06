@@ -9,3 +9,8 @@ pod:
 
 service:
   service_type: ClusterIP
+
+ingress:
+  host: myapp.127.0.0.1.nip.io
+  path: /
+  

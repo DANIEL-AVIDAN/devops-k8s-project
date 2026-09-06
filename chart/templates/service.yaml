@@ -3,9 +3,11 @@ apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-svc #from RELEASE NAME
   labels:
+    app: {{ .Release.Name }}
     {{- include "myapp.labels" . | nindent 4 }}
 spec:
   selector:
+    app: {{ .Release.Name }}
     {{- include "myapp.labels" . | nindent 4}} 
   type: {{ .Values.service.service_type }}  #from values
   ports:         
