@@ -56,7 +56,7 @@ podTemplate(containers: [
             )
         }
 
-     stage('push') {
+    stage('push') {
             container('docker') {
               script {
                 docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-creds') {
@@ -65,6 +65,14 @@ podTemplate(containers: [
               }
             }
         } //end push
+
+    stage('Deploy') {
+    container('docker') {
+        script {
+            echo "Deploying the application..."
+        }
+    }
+} 
 
     }
 }
