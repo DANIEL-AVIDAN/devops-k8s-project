@@ -1,5 +1,5 @@
-def appname = "myapp"  // Replace with your application name
-def repo = "myproject"  // Replace with your DockerHub username
+def appname = "mydevopsproject"  // Replace with your application name
+def repo = "mydevopsproject"  // Replace with your DockerHub username
 def appimage = "${repo}/${appname}"
 def apptag = "${env.BUILD_NUMBER}"
 
