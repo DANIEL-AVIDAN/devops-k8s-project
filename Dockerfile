@@ -1,13 +1,9 @@
-# FROM python:3.12-slim
+FROM python:3.12-slim
 
-# WORKDIR /app
+WORKDIR /app
 
-# COPY app.py .
+COPY app.py .
 
-# EXPOSE 8000
+EXPOSE 8000
 
-# CMD ["python", "-u", "app.py"]
-
-FROM nginx:alpine
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["python", "-u", "app.py"]

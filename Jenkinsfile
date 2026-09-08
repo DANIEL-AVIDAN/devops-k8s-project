@@ -26,14 +26,29 @@ podTemplate(containers: [
 
         stage('Parallel Build & SonarQube') {
             parallel(
-                build: {
-                    stage('build') {
-                        container('docker') {
-                            echo "Building docker image..."
-                            dockerImage = docker.build("danielavidan/${appname}:${apptag}")
-                        }
+build: {
+            stage('build') {
+                container('docker') {
+                    echo "Building docker image..."
+
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'dockerhub-creds',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )
+                    ]) {
+                        sh """
+                            echo "\$DOCKER_PASS" | docker login \
+                                -u "\$DOCKER_USER" \
+                                --password-stdin
+
+                            docker build -t danielavidan/${appname}:${apptag} .
+                        """
                     }
-                },
+                }
+            }
+        },
 
                 codeScan: {
                     stage('codeScan') {
