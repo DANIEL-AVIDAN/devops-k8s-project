@@ -3,6 +3,9 @@ def repo = "mydevopsproject"  // Replace with your DockerHub username
 def appimage = "${repo}/${appname}"
 def apptag = "${env.BUILD_NUMBER}"
 
+def dockerImage = null
+
+
 podTemplate(containers: [
       containerTemplate(name: 'jnlp', image: 'jenkins/inbound-agent', ttyEnabled: true),
       containerTemplate(name: 'docker', image: 'docker:dind', ttyEnabled: true, privileged: true),
@@ -26,29 +29,16 @@ podTemplate(containers: [
 
         stage('Parallel Build & SonarQube') {
             parallel(
-build: {
-            stage('build') {
-                container('docker') {
-                    echo "Building docker image..."
-
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub-creds',
-                            usernameVariable: 'DOCKER_USER',
-                            passwordVariable: 'DOCKER_PASS'
-                        )
-                    ]) {
-                        sh """
-                            echo "\$DOCKER_PASS" | docker login \
-                                -u "\$DOCKER_USER" \
-                                --password-stdin
-
-                            docker build -t danielavidan/${appname}:${apptag} .
-                        """
+                build: {
+                    stage('build') {
+                        container('docker') {
+                            echo "Building docker image..."
+                            docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-creds') {
+                            dockerImage = docker.build("danielavidan/${appname}:${apptag}")
+}
+                        }
                     }
-                }
-            }
-        },
+                },
 
                 codeScan: {
                     stage('codeScan') {
