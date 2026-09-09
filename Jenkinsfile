@@ -75,7 +75,7 @@ podTemplate(containers: [
     stage('Deploy') {
     container('docker') {
         script {
-            echo "Deploying the application... > mydevopsproject.yaml"
+            echo "Deploying the application..." > mydevopsproject.yaml
         }
     }
 } 
