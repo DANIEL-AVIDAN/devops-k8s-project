@@ -35,9 +35,6 @@ podTemplate(containers: [
                             echo "Building docker image..."
                             docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-creds') {
 
-                            // בדיקה זמנית
-                            sh 'docker pull python:3.12-slim'
-                            
                             dockerImage = docker.build("danielavidan/${appname}:${apptag}")
 }
                         }
